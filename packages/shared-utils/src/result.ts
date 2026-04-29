@@ -11,6 +11,6 @@ export const isErr = <T, E>(result: Result<T, E>): result is { ok: false; error:
   result.ok === false;
 
 export const mapResult = <T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> => {
-  if (isOk(result)) return ok(fn(result.value));
+  if (isOk(result)) return { ok: true, value: fn(result.value) };
   return result;
 };

@@ -1,0 +1,42 @@
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { MCIcon } from '../../components/ui/MCIcon';
+import { MCText } from '../../components/ui/MCText';
+import { useTheme } from '../../hooks/useTheme';
+
+export default function FotoScreen() {
+  const { t } = useTheme();
+  const router = useRouter();
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: t.bg }]}>
+      <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+        <MCIcon name="chevL" size={22} color={t.text} strokeWidth={2} />
+      </TouchableOpacity>
+      <View style={styles.center}>
+        <View style={[styles.iconBox, { backgroundColor: '#FF6B6B22' }]}>
+          <MCIcon name="camera" size={36} color="#FF6B6B" strokeWidth={1.6} />
+        </View>
+        <MCText style={[styles.title, { color: t.text }]}>Foto / Factura</MCText>
+        <MCText style={[styles.sub, { color: t.textSec }]}>Escáner con Gemma — Fase 3</MCText>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  back: { padding: 20 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: -60 },
+  iconBox: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: { fontSize: 22, fontWeight: '700' },
+  sub: { fontSize: 14 },
+});

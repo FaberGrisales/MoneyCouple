@@ -10,9 +10,13 @@ function RootLayoutContent() {
     <>
       <StatusBar style={dark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="gasto" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="gasto" />
+        <Stack.Screen name="analisis" />
+        <Stack.Screen name="carteras" />
+        <Stack.Screen name="pareja" />
         <Stack.Screen name="+not-found" />
       </Stack>
     </>

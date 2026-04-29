@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mc_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: moneycouple
+      POSTGRES_PASSWORD: mc_dev_pass
+      POSTGRES_DB: moneycouple_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - mc_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U moneycouple -d moneycouple_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongodb:
+    image: mongo:7
+    container_name: mc_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: moneycouple
+      MONGO_INITDB_ROOT_PASSWORD: mc_dev_pass
+      MONGO_INITDB_DATABASE: moneycouple_ia
+    ports:
+      - '27017:27017'
+    volumes:
+      - mc_mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: mc_redis
+    restart: unless-stopped
+    command: redis-server --requirepass mc_dev_pass
+    ports:
+      - '6379:6379'
+    volumes:
+      - mc_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', 'mc_dev_pass', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mc_postgres_data:
+  mc_mongo_data:
+  mc_redis_data:
