@@ -39,6 +39,12 @@
       ],
       "expo-font"
     ],
+    "updates": {
+      "enabled": false
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "experiments": {
       "typedRoutes": true
     }
