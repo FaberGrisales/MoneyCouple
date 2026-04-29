@@ -33,8 +33,11 @@
       "expo-secure-store",
       [
         "expo-camera",
-        { "cameraPermission": "MoneyCouple necesita acceso a la cámara para escanear facturas." }
-      ]
+        {
+          "cameraPermission": "MoneyCouple necesita acceso a la cámara para escanear facturas."
+        }
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
