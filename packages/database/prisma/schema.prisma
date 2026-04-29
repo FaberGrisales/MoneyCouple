@@ -1,0 +1,318 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String     @id @default(cuid())
+  email            String     @unique
+  clerkId          String?    @unique
+  nombre           String
+  apellido         String?
+  fotoPerfil       String?
+  fechaNacimiento  DateTime?
+  tipoCuenta       TipoCuenta @default(INDIVIDUAL)
+  parejaId         String?
+  pareja           Pareja?    @relation(fields: [parejaId], references: [id])
+  monedaDefault    String     @default("COP")
+  idioma           String     @default("es")
+  modoOscuro       Boolean    @default(false)
+  configPrivacidad Json?
+  ingresoMensual   Decimal?   @db.Decimal(15, 2)
+  monedaIngreso    String?
+  ingresoActualizado DateTime?
+  mostrarIngresoAPareja Boolean @default(true)
+  esPremium        Boolean    @default(false)
+  premiumHasta     DateTime?
+  stripeCustomerId String?
+  gastos           Gasto[]
+  carteras         Cartera[]
+  metas            Meta[]
+  notificaciones   Notificacion[]
+  sesiones         Sesion[]
+  emailVerificado  Boolean    @default(false)
+  ultimoLogin      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  deletedAt        DateTime?
+
+  @@index([email])
+  @@index([clerkId])
+  @@index([parejaId])
+}
+
+model Pareja {
+  id                    String             @id @default(cuid())
+  usuarios              User[]
+  estado                EstadoPareja       @default(ACTIVA)
+  fechaVinculacion      DateTime           @default(now())
+  fechaDesvinculacion   DateTime?
+  tipoDivision          TipoDivision       @default(POR_INGRESOS)
+  porcentajeUsuario1    Decimal?           @db.Decimal(5, 2)
+  porcentajeUsuario2    Decimal?           @db.Decimal(5, 2)
+  presupuestoMensual    Decimal?           @db.Decimal(15, 2)
+  nivelTransparencia    NivelTransparencia @default(COMPLETO)
+  codigoVinculacion     String?            @unique
+  codigoExpiracion      DateTime?
+  gastos                Gasto[]
+  divisiones            Division[]
+  metas                 Meta[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+}
+
+model Gasto {
+  id                   String          @id @default(cuid())
+  usuarioId            String
+  usuario              User            @relation(fields: [usuarioId], references: [id])
+  parejaId             String?
+  pareja               Pareja?         @relation(fields: [parejaId], references: [id])
+  monto                Decimal         @db.Decimal(15, 2)
+  moneda               String          @default("COP")
+  descripcion          String?
+  categoria            CategoriaGasto
+  subcategoria         String?
+  establecimiento      String?
+  ubicacion            Json?
+  fechaGasto           DateTime
+  tipoGasto            TipoGasto       @default(PERSONAL)
+  esCompartido         Boolean         @default(false)
+  quienGasta           String?
+  esPrivado            Boolean         @default(false)
+  nivelPrivacidad      NivelPrivacidad @default(COMPLETO)
+  items                Json?
+  carteraId            String?
+  cartera              Cartera?        @relation(fields: [carteraId], references: [id])
+  fuenteRegistro       FuenteRegistro
+  confianzaIA          Decimal?        @db.Decimal(3, 2)
+  necesitaConfirmacion Boolean         @default(false)
+  confirmadoPorUsuario Boolean         @default(false)
+  fotoOriginalUrl      String?
+  fotoProcesadaUrl     String?
+  audioUrl             String?
+  etiquetas            String[]
+  notas                String?
+  esRecurrente         Boolean         @default(false)
+  frecuenciaRecurrencia String?
+  proximoGasto         DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  deletedAt            DateTime?
+
+  @@index([usuarioId])
+  @@index([parejaId])
+  @@index([fechaGasto])
+  @@index([categoria])
+  @@index([carteraId])
+}
+
+model Cartera {
+  id               String      @id @default(cuid())
+  usuarioId        String
+  usuario          User        @relation(fields: [usuarioId], references: [id])
+  nombre           String
+  tipo             TipoCartera
+  saldoActual      Decimal     @db.Decimal(15, 2)
+  saldoInicial     Decimal     @db.Decimal(15, 2)
+  moneda           String      @default("COP")
+  limiteCredito    Decimal?    @db.Decimal(15, 2)
+  diaCorte         Int?
+  diaPago          Int?
+  icono            String
+  color            String
+  numeroEnmascarado String?
+  activa           Boolean     @default(true)
+  esCompartida     Boolean     @default(false)
+  gastos           Gasto[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([usuarioId])
+}
+
+model Division {
+  id                      String   @id @default(cuid())
+  parejaId                String
+  pareja                  Pareja   @relation(fields: [parejaId], references: [id])
+  mes                     String
+  ingresoUsuario1         Decimal  @db.Decimal(15, 2)
+  ingresoUsuario2         Decimal  @db.Decimal(15, 2)
+  porcentajeUsuario1      Decimal  @db.Decimal(5, 2)
+  porcentajeUsuario2      Decimal  @db.Decimal(5, 2)
+  totalGastosCompartidos  Decimal  @db.Decimal(15, 2)
+  usuario1DebePagar       Decimal  @db.Decimal(15, 2)
+  usuario2DebePagar       Decimal  @db.Decimal(15, 2)
+  usuario1YaPago          Decimal  @db.Decimal(15, 2)
+  usuario2YaPago          Decimal  @db.Decimal(15, 2)
+  balanceUsuario1         Decimal  @db.Decimal(15, 2)
+  balanceUsuario2         Decimal  @db.Decimal(15, 2)
+  deudorId                String?
+  acreedorId              String?
+  montoDebido             Decimal? @db.Decimal(15, 2)
+  saldado                 Boolean  @default(false)
+  pagos                   Json?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@unique([parejaId, mes])
+  @@index([parejaId])
+}
+
+model Meta {
+  id              String         @id @default(cuid())
+  usuarioId       String?
+  usuario         User?          @relation(fields: [usuarioId], references: [id])
+  parejaId        String?
+  pareja          Pareja?        @relation(fields: [parejaId], references: [id])
+  titulo          String
+  descripcion     String?
+  tipo            TipoMeta
+  montoObjetivo   Decimal        @db.Decimal(15, 2)
+  montoActual     Decimal        @db.Decimal(15, 2) @default(0)
+  moneda          String         @default("COP")
+  fechaInicio     DateTime
+  fechaFin        DateTime?
+  categoriaLimite CategoriaGasto?
+  estado          EstadoMeta     @default(ACTIVA)
+  icono           String?
+  color           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([usuarioId])
+  @@index([parejaId])
+}
+
+model Notificacion {
+  id        String           @id @default(cuid())
+  usuarioId String
+  usuario   User             @relation(fields: [usuarioId], references: [id])
+  tipo      TipoNotificacion
+  titulo    String
+  mensaje   String
+  data      Json?
+  leida     Boolean          @default(false)
+  leidaEn  DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([usuarioId])
+  @@index([leida])
+}
+
+model Sesion {
+  id           String   @id @default(cuid())
+  usuarioId    String
+  usuario      User     @relation(fields: [usuarioId], references: [id])
+  token        String   @unique
+  refreshToken String   @unique
+  dispositivo  String?
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([token])
+  @@index([refreshToken])
+}
+
+enum TipoCuenta {
+  INDIVIDUAL
+  PAREJA
+}
+
+enum EstadoPareja {
+  ACTIVA
+  PAUSADA
+  SEPARADA
+}
+
+enum TipoDivision {
+  POR_INGRESOS
+  CINCUENTA_CINCUENTA
+  CUSTOM
+}
+
+enum NivelTransparencia {
+  COMPLETO
+  PARCIAL
+  MINIMO
+}
+
+enum CategoriaGasto {
+  COMIDA
+  TRANSPORTE
+  ENTRETENIMIENTO
+  SERVICIOS
+  COMPRAS
+  SALUD
+  EDUCACION
+  VIAJES
+  HOGAR
+  MASCOTAS
+  REGALOS
+  IMPUESTOS
+  OTROS
+}
+
+enum TipoGasto {
+  PERSONAL
+  COMPARTIDO
+  ADELANTO
+  REEMBOLSO
+}
+
+enum NivelPrivacidad {
+  COMPLETO
+  CATEGORIA_SOLO
+  OCULTO
+}
+
+enum FuenteRegistro {
+  FOTO_GEMMA
+  CHAT
+  VOZ
+  MANUAL
+  IMPORTADO
+  RECURRENTE
+}
+
+enum TipoCartera {
+  BILLETERA_DIGITAL
+  BANCO_AHORROS
+  BANCO_CORRIENTE
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+  EFECTIVO
+  INVERSION
+  CRIPTO
+  OTRO
+}
+
+enum TipoMeta {
+  AHORRO
+  GASTO_LIMITE
+  INGRESO
+  DEUDA
+}
+
+enum EstadoMeta {
+  ACTIVA
+  COMPLETADA
+  PAUSADA
+  CANCELADA
+}
+
+enum TipoNotificacion {
+  GASTO_REGISTRADO
+  PAREJA_VINCULADA
+  META_ALCANZADA
+  PRESUPUESTO_EXCEDIDO
+  RECORDATORIO_PAGO
+  GASTO_INUSUAL
+  RESUMEN_MENSUAL
+}
