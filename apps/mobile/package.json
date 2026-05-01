@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.4.4",
+    "@expo/metro-runtime": "^6.1.2",
     "@expo/vector-icons": "^15.1.1",
     "@hookform/resolvers": "^3.9.1",
     "@moneycouple/shared-types": "workspace:*",
