@@ -3,9 +3,9 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MCIcon } from '../../components/ui/MCIcon';
-import { MCText } from '../../components/ui/MCText';
-import { useTheme } from '../../hooks/useTheme';
+import { MCIcon } from '../components/ui/MCIcon';
+import { MCText } from '../components/ui/MCText';
+import { useTheme } from '../hooks/useTheme';
 
 export default function AnalisisScreen() {
   const { t, accent } = useTheme();
