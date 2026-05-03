@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MCIcon } from '../../components/ui/MCIcon';
@@ -10,71 +10,9 @@ import { WalletCard } from '../../components/shared/WalletCard';
 import { TransactionRow } from '../../components/shared/TransactionRow';
 import { InsightCard } from '../../components/shared/InsightCard';
 import { useTheme } from '../../hooks/useTheme';
+import { useDashboard } from '../../hooks/useGastos';
 import { formatCOPFull, formatCOP } from '@moneycouple/shared-utils';
 import { MC_CATS } from '../../constants/tokens';
-
-const SAMPLE_TRANSACTIONS = [
-  {
-    id: '1',
-    merchant: 'Juan Valdez',
-    category: 'COMIDA',
-    amount: -18500,
-    when: 'Hace 2h',
-    method: 'Foto',
-    shared: false,
-  },
-  {
-    id: '2',
-    merchant: 'Uber',
-    category: 'TRANSPORTE',
-    amount: -24300,
-    when: 'Hoy, 9:14',
-    method: 'Manual',
-    shared: false,
-  },
-  {
-    id: '3',
-    merchant: 'Cine Colombia',
-    category: 'ENTRETENIMIENTO',
-    amount: -42000,
-    when: 'Ayer',
-    method: 'Chat',
-    shared: true,
-  },
-  {
-    id: '4',
-    merchant: 'Éxito',
-    category: 'COMPRAS',
-    amount: -187600,
-    when: 'Ayer',
-    method: 'Foto',
-    shared: true,
-  },
-  {
-    id: '5',
-    merchant: 'Pago nómina',
-    category: null,
-    amount: 4000000,
-    when: '20 abr',
-    method: 'Auto',
-    isIncome: true,
-  },
-] as const;
-
-const WALLETS = [
-  { id: 'nequi', name: 'Nequi', brand: '#7B0F73', balance: 487300, type: 'Billetera' },
-  { id: 'banco', name: 'Bancolombia', brand: '#FFCC00', balance: 1547800, type: 'Ahorros' },
-  { id: 'visa', name: 'Visa Cred.', brand: '#1A1F71', balance: -312000, type: 'Crédito' },
-  { id: 'davi', name: 'Daviplata', brand: '#E1141B', balance: 95400, type: 'Billetera' },
-] as const;
-
-const CAT_DATA = [
-  { key: 'COMIDA', value: 287000 },
-  { key: 'TRANSPORTE', value: 142000 },
-  { key: 'ENTRETENIMIENTO', value: 198000 },
-  { key: 'COMPRAS', value: 85400 },
-  { key: 'OTROS', value: 40000 },
-] as const;
 
 type ViewMode = 'personal' | 'couple';
 
@@ -82,20 +20,30 @@ export default function HomeScreen() {
   const { t, accent } = useTheme();
   const router = useRouter();
   const [view, setView] = useState<ViewMode>('personal');
-  const paired = true;
+  const paired = false;
   const isCouple = view === 'couple';
 
-  const total = isCouple ? 8432000 : WALLETS.reduce((s, w) => s + w.balance, 0);
-  const monthSpent = isCouple ? 1340000 : 752400;
-  const monthBudget = isCouple ? 1800000 : 1000000;
-  const pct = Math.min(1, monthSpent / monthBudget);
+  const { data: dashboard, isLoading, isError } = useDashboard();
 
-  const catData = CAT_DATA.map((c) => ({
-    key: c.key,
-    value: c.value,
-    color: MC_CATS[c.key as keyof typeof MC_CATS]?.color ?? '#B0BEC5',
+  // Derived data from API or empty fallback
+  const totalGastos = dashboard?.totalGastos ?? 0;
+  const carteras = dashboard?.carteras ?? [];
+  const gastosRecientes = dashboard?.gastosRecientes ?? [];
+  const porCategoria = dashboard?.porCategoria ?? [];
+
+  const catData = porCategoria.map((c) => ({
+    key: c.categoria,
+    value: c.total,
+    color: MC_CATS[c.categoria as keyof typeof MC_CATS]?.color ?? '#B0BEC5',
   }));
   const catSum = catData.reduce((s, c) => s + c.value, 0);
+
+  const walletTotal = carteras.reduce((s, w) => s + w.saldoActual, 0);
+  const total = isCouple ? walletTotal : walletTotal;
+
+  const monthBudget = 1000000;
+  const monthSpent = totalGastos;
+  const pct = monthBudget > 0 ? Math.min(1, monthSpent / monthBudget) : 0;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.bg }]}>
@@ -124,7 +72,13 @@ export default function HomeScreen() {
               </View>
             )}
             <View>
-              <MCText style={[styles.headerDate, { color: t.textSec }]}>Sábado, 26 abr</MCText>
+              <MCText style={[styles.headerDate, { color: t.textSec }]}>
+                {new Date().toLocaleDateString('es-CO', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </MCText>
               <MCText style={styles.headerName}>
                 Hola, {isCouple ? 'Juan & María' : 'Juan'} 👋
               </MCText>
@@ -189,47 +143,64 @@ export default function HomeScreen() {
               <MCText style={{ fontSize: 11, fontWeight: '600', color: t.text }}>COP ▾</MCText>
             </View>
           </View>
-          <MCText style={[styles.heroAmount, { color: t.text }]}>{formatCOPFull(total)}</MCText>
-          <View style={styles.heroChange}>
-            <View style={styles.changeBadge}>
-              <MCIcon name="arrowU" size={12} color="#10B981" strokeWidth={2.5} />
-              <MCText style={styles.changeText}>{isCouple ? '+3.9%' : '+2.5%'}</MCText>
-            </View>
-            <MCText style={[styles.changeSub, { color: t.textSec }]}>
-              {isCouple ? '+$320K este mes' : '+$120K vs mes pasado'}
-            </MCText>
-          </View>
+          {isLoading ? (
+            <ActivityIndicator size="large" color={accent} style={{ marginVertical: 16 }} />
+          ) : (
+            <>
+              <MCText style={[styles.heroAmount, { color: t.text }]}>{formatCOPFull(total)}</MCText>
+              <View style={styles.heroChange}>
+                <View style={styles.changeBadge}>
+                  <MCIcon name="arrowU" size={12} color="#10B981" strokeWidth={2.5} />
+                  <MCText style={styles.changeText}>{isCouple ? '+3.9%' : '+2.5%'}</MCText>
+                </View>
+                <MCText style={[styles.changeSub, { color: t.textSec }]}>
+                  {isCouple ? '+$320K este mes' : '+$120K vs mes pasado'}
+                </MCText>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Wallets */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MCText style={[styles.sectionLabel, { color: t.textSec }]}>CARTERAS</MCText>
-            <TouchableOpacity onPress={() => router.push('/carteras')}>
-              <MCText style={[styles.sectionAction, { color: accent }]}>Ver todas</MCText>
-            </TouchableOpacity>
+        {carteras.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MCText style={[styles.sectionLabel, { color: t.textSec }]}>CARTERAS</MCText>
+              <TouchableOpacity onPress={() => router.push('/carteras')}>
+                <MCText style={[styles.sectionAction, { color: accent }]}>Ver todas</MCText>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.walletsScroll}
+            >
+              {carteras.map((w) => (
+                <WalletCard
+                  key={w.id}
+                  wallet={{
+                    id: w.id,
+                    name: w.nombre,
+                    brand: w.color,
+                    balance: w.saldoActual,
+                    type: w.tipo,
+                  }}
+                />
+              ))}
+              <TouchableOpacity style={[styles.addWallet, { borderColor: t.borderStrong }]}>
+                <MCIcon name="plus" size={20} color={t.textSec} />
+                <MCText style={[styles.addWalletLabel, { color: t.textSec }]}>Agregar</MCText>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.walletsScroll}
-          >
-            {WALLETS.map((w) => (
-              <WalletCard key={w.id} wallet={w} />
-            ))}
-            <TouchableOpacity style={[styles.addWallet, { borderColor: t.borderStrong }]}>
-              <MCIcon name="plus" size={20} color={t.textSec} />
-              <MCText style={[styles.addWalletLabel, { color: t.textSec }]}>Agregar</MCText>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
+        )}
 
         {/* Budget */}
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
           <View style={styles.budgetHeader}>
             <View>
               <MCText style={[styles.budgetLabel, { color: t.textSec }]}>
-                {isCouple ? 'Presupuesto compartido · abril' : 'Presupuesto de abril'}
+                {isCouple ? 'Presupuesto compartido · este mes' : 'Presupuesto de este mes'}
               </MCText>
               <MCText style={[styles.budgetAmount, { color: t.text }]}>
                 {formatCOP(monthSpent)}{' '}
@@ -259,55 +230,64 @@ export default function HomeScreen() {
           <MCText style={[styles.budgetSub, { color: t.textSec }]}>
             Te quedan{' '}
             <MCText style={{ color: t.text, fontWeight: '600' }}>
-              {formatCOP(monthBudget - monthSpent)}
+              {formatCOP(Math.max(0, monthBudget - monthSpent))}
             </MCText>
-            {' · '}5 días restantes
           </MCText>
         </View>
 
         {/* Categories donut */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MCText style={[styles.sectionLabel, { color: t.textSec }]}>POR CATEGORÍA</MCText>
-            <TouchableOpacity onPress={() => router.push('/analisis')}>
-              <MCText style={[styles.sectionAction, { color: accent }]}>Detalle</MCText>
-            </TouchableOpacity>
-          </View>
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: t.surface,
-                borderColor: t.border,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 16,
-              },
-            ]}
-          >
-            <DonutChart data={catData} size={120} stroke={18} />
-            <View style={{ flex: 1, gap: 6 }}>
-              {catData.slice(0, 4).map((c) => (
-                <View key={c.key} style={styles.catRow}>
-                  <View style={[styles.catDot, { backgroundColor: c.color }]} />
-                  <MCText style={[styles.catName, { color: t.text }]}>
-                    {MC_CATS[c.key as keyof typeof MC_CATS]?.name ?? c.key}
-                  </MCText>
-                  <MCText style={[styles.catPct, { color: t.textSec }]}>
-                    {Math.round((c.value / catSum) * 100)}%
-                  </MCText>
-                </View>
-              ))}
+        {(catData.length > 0 || !isLoading) && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MCText style={[styles.sectionLabel, { color: t.textSec }]}>POR CATEGORÍA</MCText>
+              <TouchableOpacity onPress={() => router.push('/analisis')}>
+                <MCText style={[styles.sectionAction, { color: accent }]}>Detalle</MCText>
+              </TouchableOpacity>
+            </View>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: t.surface,
+                  borderColor: t.border,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 16,
+                },
+              ]}
+            >
+              {catData.length > 0 ? (
+                <>
+                  <DonutChart data={catData} size={120} stroke={18} />
+                  <View style={{ flex: 1, gap: 6 }}>
+                    {catData.slice(0, 4).map((c) => (
+                      <View key={c.key} style={styles.catRow}>
+                        <View style={[styles.catDot, { backgroundColor: c.color }]} />
+                        <MCText style={[styles.catName, { color: t.text }]}>
+                          {MC_CATS[c.key as keyof typeof MC_CATS]?.name ?? c.key}
+                        </MCText>
+                        <MCText style={[styles.catPct, { color: t.textSec }]}>
+                          {catSum > 0 ? Math.round((c.value / catSum) * 100) : 0}%
+                        </MCText>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              ) : (
+                <MCText style={[{ color: t.textSec, textAlign: 'center', flex: 1 }]}>
+                  {isError ? 'No se pudo cargar los datos' : 'Sin gastos este mes'}
+                </MCText>
+              )}
             </View>
           </View>
-        </View>
+        )}
 
         {/* AI Insight */}
         <InsightCard
           text={
             isCouple
               ? 'Gastan 30% más juntos los fines de semana. María cubrió 57% de gastos compartidos este mes.'
-              : 'Tus gastos de comida bajaron 18% esta semana. Si mantienes el ritmo, ahorrarás $80K en abril.'
+              : 'Registra tus gastos para recibir insights personalizados.'
           }
         />
 
@@ -330,13 +310,33 @@ export default function HomeScreen() {
               },
             ]}
           >
-            {SAMPLE_TRANSACTIONS.map((tx, i) => (
-              <TransactionRow
-                key={tx.id}
-                transaction={tx as never}
-                isLast={i === SAMPLE_TRANSACTIONS.length - 1}
-              />
-            ))}
+            {isLoading ? (
+              <ActivityIndicator size="small" color={accent} style={{ marginVertical: 16 }} />
+            ) : gastosRecientes.length > 0 ? (
+              gastosRecientes.map((tx, i) => (
+                <TransactionRow
+                  key={tx.id}
+                  transaction={{
+                    id: tx.id,
+                    merchant: tx.establecimiento ?? tx.descripcion ?? tx.categoria,
+                    category: tx.categoria,
+                    amount: -tx.monto,
+                    when: new Date(tx.fechaGasto).toLocaleDateString('es-CO'),
+                    method: tx.fuenteRegistro,
+                    shared: tx.esCompartido,
+                  }}
+                  isLast={i === gastosRecientes.length - 1}
+                />
+              ))
+            ) : (
+              <MCText
+                style={[
+                  { color: t.textSec, textAlign: 'center', paddingVertical: 16, fontSize: 13 },
+                ]}
+              >
+                {isError ? 'No se pudo conectar al servidor' : 'No hay gastos este mes'}
+              </MCText>
+            )}
           </View>
         </View>
       </ScrollView>

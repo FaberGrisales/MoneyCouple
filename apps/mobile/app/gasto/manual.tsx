@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MCIcon } from '../../components/ui/MCIcon';
 import { MCText } from '../../components/ui/MCText';
 import { useTheme } from '../../hooks/useTheme';
+import { useCreateGasto } from '../../hooks/useGastos';
 import { formatCOPFull } from '@moneycouple/shared-utils';
 
 export default function ManualScreen() {
@@ -14,7 +15,32 @@ export default function ManualScreen() {
   const [amount, setAmount] = useState('');
   const [desc, setDesc] = useState('');
 
+  const { mutate: createGasto, isPending } = useCreateGasto();
+
   const numAmount = parseInt(amount.replace(/\D/g, ''), 10) || 0;
+
+  const handleSave = () => {
+    if (numAmount <= 0) return;
+
+    createGasto(
+      {
+        monto: numAmount,
+        categoria: 'OTROS',
+        fechaGasto: new Date().toISOString(),
+        ...(desc.trim().length > 0 && { descripcion: desc.trim() }),
+      },
+      {
+        onSuccess: () => {
+          router.back();
+        },
+        onError: (error: Error) => {
+          Alert.alert('Error', error.message ?? 'No se pudo guardar el gasto. Intenta de nuevo.', [
+            { text: 'OK' },
+          ]);
+        },
+      },
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.bg }]}>
@@ -63,12 +89,15 @@ export default function ManualScreen() {
 
         {/* Save button */}
         <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: accent, opacity: numAmount > 0 ? 1 : 0.4 }]}
-          disabled={numAmount === 0}
-          onPress={() => router.back()}
+          style={[
+            styles.saveBtn,
+            { backgroundColor: accent, opacity: numAmount > 0 && !isPending ? 1 : 0.4 },
+          ]}
+          disabled={numAmount === 0 || isPending}
+          onPress={handleSave}
         >
           <MCIcon name="check" size={20} color="#fff" strokeWidth={2.5} />
-          <MCText style={styles.saveBtnText}>Guardar gasto</MCText>
+          <MCText style={styles.saveBtnText}>{isPending ? 'Guardando...' : 'Guardar gasto'}</MCText>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 
 import corsPlugin from './plugins/cors.plugin';
 import helmetPlugin from './plugins/helmet.plugin';
+import jwtPlugin from './plugins/jwt.plugin';
 import prismaPlugin from './plugins/prisma.plugin';
 import rateLimitPlugin from './plugins/rateLimit.plugin';
 import redisPlugin from './plugins/redis.plugin';
@@ -30,6 +31,7 @@ export const buildApp = async () => {
   await app.register(prismaPlugin);
   await app.register(redisPlugin);
   await app.register(swaggerPlugin);
+  await app.register(jwtPlugin);
 
   // Routes
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
