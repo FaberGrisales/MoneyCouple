@@ -46,7 +46,7 @@ export default function OnboardingScreen() {
           </View>
           <MCText style={[styles.logoName, { color: t.text }]}>MoneyCouple</MCText>
         </View>
-        <TouchableOpacity onPress={() => router.replace('/(tabs)/')}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
           <MCText style={{ color: t.textSec, fontSize: 13, fontWeight: '600' }}>Saltar</MCText>
         </TouchableOpacity>
       </View>

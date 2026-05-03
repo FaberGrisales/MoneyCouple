@@ -1,21 +1,32 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 import { useTheme } from '../../hooks/useTheme';
 import { MCIcon } from '../ui/MCIcon';
 import { MCText } from '../ui/MCText';
 
-const NAV_ITEMS = [
+interface NavItem {
+  name: string;
+  icon: string;
+  label: string;
+  isFab?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { name: 'index', icon: 'home', label: 'Inicio' },
-  { name: 'analytics', icon: 'chart', label: 'Análisis' },
+  { name: 'analytics', icon: 'chart', label: 'Analisis' },
   { name: 'add', icon: 'plus', label: '', isFab: true },
   { name: 'wallets', icon: 'wallet', label: 'Carteras' },
   { name: 'profile', icon: 'user', label: 'Perfil' },
-] as const;
+];
 
-export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
+interface TabBarProps {
+  state: { index: number };
+  navigation: { navigate: (name: string) => void };
+}
+
+export function BottomTabBar({ state, navigation }: TabBarProps) {
   const { t, dark, accent } = useTheme();
   const router = useRouter();
 

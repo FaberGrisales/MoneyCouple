@@ -42,7 +42,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setAccent,
         accent: acc.primary,
         accentDark: acc.dark,
-        t: dark ? MC_TOKENS.dark : MC_TOKENS.light,
+        t: (dark ? MC_TOKENS.dark : MC_TOKENS.light) as (typeof MC_TOKENS)['light'],
       }}
     >
       {children}

@@ -45,7 +45,7 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           style={[styles.loginBtn, { backgroundColor: accent }]}
-          onPress={() => router.replace('/(tabs)/')}
+          onPress={() => router.replace('/(tabs)')}
         >
           <MCText style={styles.loginBtnText}>Iniciar sesión</MCText>
         </TouchableOpacity>
@@ -71,7 +71,7 @@ export default function LoginScreen() {
           ¿No tienes cuenta?{' '}
           <MCText
             style={{ color: accent, fontWeight: '700' }}
-            onPress={() => router.push('/(auth)/register')}
+            onPress={() => router.push('/(auth)/onboarding')}
           >
             Regístrate
           </MCText>
