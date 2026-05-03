@@ -11,6 +11,7 @@ import { TransactionRow } from '../../components/shared/TransactionRow';
 import { InsightCard } from '../../components/shared/InsightCard';
 import { useTheme } from '../../hooks/useTheme';
 import { useDashboard } from '../../hooks/useGastos';
+import { useProfile } from '../../hooks/useProfile';
 import { formatCOPFull, formatCOP } from '@moneycouple/shared-utils';
 import { MC_CATS } from '../../constants/tokens';
 
@@ -20,7 +21,8 @@ export default function HomeScreen() {
   const { t, accent } = useTheme();
   const router = useRouter();
   const [view, setView] = useState<ViewMode>('personal');
-  const paired = false;
+  const { data: profile } = useProfile();
+  const paired = profile?.parejaId != null;
   const isCouple = view === 'couple';
 
   const { data: dashboard, isLoading, isError } = useDashboard();

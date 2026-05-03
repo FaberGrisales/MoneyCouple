@@ -1,12 +1,21 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MCIcon } from '../../components/ui/MCIcon';
 import { MCText } from '../../components/ui/MCText';
 import { useTheme } from '../../hooks/useTheme';
 import { useCreateGasto } from '../../hooks/useGastos';
+import { useProfile } from '../../hooks/useProfile';
 import { formatCOPFull } from '@moneycouple/shared-utils';
 
 export default function ManualScreen() {
@@ -14,7 +23,10 @@ export default function ManualScreen() {
   const router = useRouter();
   const [amount, setAmount] = useState('');
   const [desc, setDesc] = useState('');
+  const [esCompartido, setEsCompartido] = useState(false);
 
+  const { data: profile } = useProfile();
+  const hasPaeja = profile?.parejaId != null;
   const { mutate: createGasto, isPending } = useCreateGasto();
 
   const numAmount = parseInt(amount.replace(/\D/g, ''), 10) || 0;
@@ -28,6 +40,7 @@ export default function ManualScreen() {
         categoria: 'OTROS',
         fechaGasto: new Date().toISOString(),
         ...(desc.trim().length > 0 && { descripcion: desc.trim() }),
+        ...(esCompartido && { esCompartido: true }),
       },
       {
         onSuccess: () => {
@@ -87,6 +100,25 @@ export default function ManualScreen() {
           />
         </View>
 
+        {/* Share with partner toggle */}
+        {hasPaeja && (
+          <View style={[styles.toggleRow, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <MCIcon
+              name="heart"
+              size={18}
+              color={esCompartido ? '#FF6B6B' : t.textSec}
+              strokeWidth={1.8}
+            />
+            <MCText style={[styles.toggleLabel, { color: t.text }]}>Compartir con pareja</MCText>
+            <Switch
+              value={esCompartido}
+              onValueChange={setEsCompartido}
+              trackColor={{ false: t.surfaceVar, true: accent + '88' }}
+              thumbColor={esCompartido ? accent : t.textTer}
+            />
+          </View>
+        )}
+
         {/* Save button */}
         <TouchableOpacity
           style={[
@@ -130,6 +162,16 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 16, fontWeight: '500' },
   currency: { fontSize: 13, fontWeight: '600' },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 0.5,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  toggleLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',

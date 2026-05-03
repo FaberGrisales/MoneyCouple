@@ -108,6 +108,18 @@ export default async function gastosRoutes(app: FastifyInstance) {
         etiquetas,
       } = request.body;
 
+      // Auto-set parejaId when gasto is shared
+      let autoParejaId: string | undefined;
+      if (esCompartido) {
+        const userRecord = await app.prisma.user.findUnique({
+          where: { id: usuarioId },
+          select: { parejaId: true },
+        });
+        if (userRecord?.parejaId) {
+          autoParejaId = userRecord.parejaId;
+        }
+      }
+
       const gasto = await app.prisma.gasto.create({
         data: {
           usuarioId,
@@ -120,6 +132,7 @@ export default async function gastosRoutes(app: FastifyInstance) {
           ...(tipoGasto != null && { tipoGasto: tipoGasto as never }),
           ...(carteraId != null && { carteraId }),
           ...(esCompartido != null && { esCompartido }),
+          ...(autoParejaId != null && { parejaId: autoParejaId }),
           ...(notas != null && { notas }),
           ...(etiquetas != null && { etiquetas }),
         },
