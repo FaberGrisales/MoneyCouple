@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -11,17 +12,30 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useTheme } from '../../hooks/useTheme';
 import { MCIcon } from '../../components/ui/MCIcon';
 import { MCText } from '../../components/ui/MCText';
+import { useTheme } from '../../hooks/useTheme';
+import { useCreateGasto } from '../../hooks/useGastos';
+import { useParsearTexto, type GastoParseado } from '../../hooks/useIA';
 import { formatCOPFull } from '@moneycouple/shared-utils';
 
 type Message =
   | { id: string; from: 'bot'; text: string; time: string }
   | { id: string; from: 'user'; text: string; time: string }
-  | { id: string; from: 'bot'; kind: 'parsed'; amount: number; merchant: string; time: string };
+  | {
+      id: string;
+      from: 'bot';
+      kind: 'parsed';
+      parsed: GastoParseado;
+      time: string;
+    };
 
 const QUICK_REPLIES = ['Gasté 45 mil en Starbucks', '$25K en Uber', '120K en Éxito ayer'];
+
+function nowTime() {
+  const d = new Date();
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
 
 export default function ChatScreen() {
   const { t, accent } = useTheme();
@@ -33,29 +47,63 @@ export default function ChatScreen() {
       id: '1',
       from: 'bot',
       text: '¡Hola! Cuéntame sobre tu gasto. Puedes decirme cuánto, dónde y cuándo 💸',
-      time: '14:30',
+      time: nowTime(),
     },
   ]);
   const listRef = useRef<FlatList>(null);
 
+  const parsearTexto = useParsearTexto();
+  const createGasto = useCreateGasto();
+
   const send = (text: string) => {
     if (!text.trim()) return;
-    const userMsg: Message = { id: String(Date.now()), from: 'user', text, time: '14:31' };
+    const userMsg: Message = { id: String(Date.now()), from: 'user', text, time: nowTime() };
     setMessages((m) => [...m, userMsg]);
     setDraft('');
     setStep(1);
-    setTimeout(() => {
-      const parsed: Message = {
-        id: String(Date.now() + 1),
-        from: 'bot',
-        kind: 'parsed',
-        amount: 45000,
-        merchant: 'Starbucks',
-        time: '14:31',
-      };
-      setMessages((m) => [...m, parsed]);
-      setStep(2);
-    }, 800);
+
+    parsearTexto.mutate(
+      { texto: text },
+      {
+        onSuccess: (parsed) => {
+          const parsedMsg: Message = {
+            id: String(Date.now() + 1),
+            from: 'bot',
+            kind: 'parsed',
+            parsed,
+            time: nowTime(),
+          };
+          setMessages((m) => [...m, parsedMsg]);
+          setStep(2);
+        },
+        onError: () => {
+          const errMsg: Message = {
+            id: String(Date.now() + 1),
+            from: 'bot',
+            text: 'No pude entender el gasto, intenta de nuevo',
+            time: nowTime(),
+          };
+          setMessages((m) => [...m, errMsg]);
+          setStep(0);
+        },
+      },
+    );
+  };
+
+  const handleConfirm = (parsed: GastoParseado) => {
+    createGasto.mutate(
+      {
+        monto: parsed.monto,
+        descripcion: parsed.descripcion,
+        categoria: parsed.categoriaSugerida ?? 'OTROS',
+        fechaGasto: parsed.fecha,
+        fuenteRegistro: 'CHAT',
+        ...(parsed.establecimiento != null && { establecimiento: parsed.establecimiento }),
+      } as Parameters<typeof createGasto.mutate>[0],
+      {
+        onSuccess: () => router.back(),
+      },
+    );
   };
 
   const renderMessage = ({ item: m }: { item: Message }) => {
@@ -72,6 +120,9 @@ export default function ChatScreen() {
       );
     }
     if ('kind' in m && m.kind === 'parsed') {
+      const { parsed } = m;
+      const merchant = parsed.establecimiento ?? parsed.descripcion;
+      const category = parsed.categoriaSugerida ?? 'OTROS';
       return (
         <View style={styles.botMsgWrap}>
           <BotAvatar />
@@ -82,22 +133,32 @@ export default function ChatScreen() {
             </View>
             <View style={styles.parsedGrid}>
               <MCText style={{ color: t.textSec, fontSize: 13 }}>Monto</MCText>
-              <MCText style={{ fontWeight: '700', fontSize: 13 }}>{formatCOPFull(m.amount)}</MCText>
+              <MCText style={{ fontWeight: '700', fontSize: 13 }}>
+                {formatCOPFull(parsed.monto)}
+              </MCText>
               <MCText style={{ color: t.textSec, fontSize: 13 }}>Comercio</MCText>
-              <MCText style={{ fontWeight: '600', fontSize: 13 }}>{m.merchant}</MCText>
+              <MCText style={{ fontWeight: '600', fontSize: 13 }}>{merchant}</MCText>
               <MCText style={{ color: t.textSec, fontSize: 13 }}>Categoría</MCText>
-              <MCText style={{ fontWeight: '600', fontSize: 13 }}>🍕 Comida</MCText>
+              <MCText style={{ fontWeight: '600', fontSize: 13 }}>{category}</MCText>
             </View>
             <View style={styles.parsedActions}>
               <TouchableOpacity
-                onPress={() => router.back()}
+                onPress={() => handleConfirm(parsed)}
                 style={[styles.confirmBtn, { backgroundColor: accent }]}
+                disabled={createGasto.isPending}
               >
-                <MCText style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
-                  Confirmar
-                </MCText>
+                {createGasto.isPending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <MCText style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
+                    Confirmar
+                  </MCText>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.editBtn, { backgroundColor: t.surfaceVar }]}>
+              <TouchableOpacity
+                style={[styles.editBtn, { backgroundColor: t.surfaceVar }]}
+                onPress={() => router.push('/gasto/manual')}
+              >
                 <MCText style={{ color: t.text, fontWeight: '600', fontSize: 13 }}>Editar</MCText>
               </TouchableOpacity>
             </View>
@@ -200,9 +261,14 @@ export default function ChatScreen() {
           />
           <TouchableOpacity
             onPress={() => send(draft)}
+            disabled={parsearTexto.isPending}
             style={[styles.sendBtn, { backgroundColor: draft ? accent : t.surfaceVar }]}
           >
-            <MCIcon name="send" size={16} color={draft ? '#fff' : t.textSec} strokeWidth={2} />
+            {parsearTexto.isPending ? (
+              <ActivityIndicator size="small" color={draft ? '#fff' : t.textSec} />
+            ) : (
+              <MCIcon name="send" size={16} color={draft ? '#fff' : t.textSec} strokeWidth={2} />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -264,7 +330,6 @@ const styles = StyleSheet.create({
   botBubble: {
     borderRadius: 18,
     borderTopLeftRadius: 4,
-    padding: '10px 14px' as never,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 0.5,

@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["mcp__stitch__get_screen", "Bash(npm show *)", "Bash(npm info *)"]
+  }
+}
